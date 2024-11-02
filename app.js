@@ -3,61 +3,58 @@ const cheerio = require('cheerio');
 require('dotenv').config();
 const nodemailer = require('nodemailer');
 
-const url = 'https://ge.globo.com/futebol/futebol-internacional/liga-dos-campeoes/';
+// URL da página que contém a mensagem específica
+const url = 'https://www.mundodasmensagens.com/mensagens-amor/';
 
 async function fetchData() {
     try {
+        // Faz a requisição para a página
         const response = await fetch(url);
         const html = await response.text();
         const $ = cheerio.load(html);
-        const tabelaStatus = $('.ranking-item-wrapper');
-        const tabelaJogador = [];
 
-        tabelaStatus.each(function () {
-            const nomeJogador = $(this).find('.jogador-nome').text().trim();
-            const posicaoJogador = $(this).find('.jogador-posicao').text().trim();
-            const numeroGols = $(this).find('.jogador-gols').text().trim();
-            const rankingJogador = $(this).find('.ranking-item').text()?.trim();
+        // Seleciona o elemento específico com ID 3944
+        const titulo = $('#3944 .boxtitle').text().trim();
+        const textoMensagem = $('#3944 .copy-text').text().trim();
 
-            if (nomeJogador && posicaoJogador && numeroGols && rankingJogador) {
-                tabelaJogador.push({
-                    nomeJogador,
-                    posicaoJogador,
-                    numeroGols,
-                    rankingJogador,
-                });
-            }
-        });
+        if (titulo && textoMensagem) {
+            const mensagem = {
+                titulo,
+                textoMensagem,
+            };
 
-        const top5Jogadores = tabelaJogador.slice(0, 5);
-        sendEmail(top5Jogadores);
+            // Envia apenas a mensagem com ID 3944 por e-mail
+            sendEmail(mensagem);
+        } else {
+            console.log('Mensagem com ID 3944 não encontrada.');
+        }
     } catch (error) {
         console.error('Erro ao buscar dados:', error);
     }
 }
 
+// Configuração de transporte de e-mail
 const transporter = nodemailer.createTransport({
     host: process.env.EMAIL_HOST,
     port: process.env.EMAIL_PORT,
-    secure: false, 
+    secure: false,
     auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS,
     },
 });
 
-
-async function sendEmail(top5Jogadores) {
+async function sendEmail(mensagem) {
     try {
-        const listaJogadores = top5Jogadores.map(jogador => 
-            `Nome: ${jogador.nomeJogador}\nPosição: ${jogador.posicaoJogador}\nGols: ${jogador.numeroGols}\nRanking: ${jogador.rankingJogador}\n\n`
-        ).join('');
+        // Monta o conteúdo do e-mail com a mensagem específica
+        const conteudoEmail = `${mensagem.titulo}\n\n\n${mensagem.textoMensagem}\n\n`;
 
+        // Envia o e-mail
         const info = await transporter.sendMail({
-            from: `"Nome do Remetente" <${process.env.EMAIL_USER}>`,
-            to: 'erichataina@gmail.com', 
-            subject: 'Top 5 Artilheiros da UEFA', 
-            text: `Top 5 Artilheiros da UEFA:\n\n${listaJogadores}`,
+            from: `"Remetente" <${process.env.EMAIL_USER}>`,
+            to: `${process.env.EMAIL_RECEBER}`,
+            subject: 'Mensagem de Amor - Eu quero você para mim',
+            text: conteudoEmail,
         });
 
         console.log('E-mail enviado: %s', info.messageId);
@@ -66,4 +63,5 @@ async function sendEmail(top5Jogadores) {
     }
 }
 
+// Executa o scraper
 fetchData();
